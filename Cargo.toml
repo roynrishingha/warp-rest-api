@@ -1,0 +1,19 @@
+[package]
+name = "warp-rest-api"
+version = "0.1.0"
+edition = "2021"
+authors = ["Nrishinghananda Roy <royrustdev@gmail.com>"]
+description = "A REST API created with warp framework that lets it users to ask and answer questions."
+categories = ["web server", "api"]
+keywords = ["web server","api", "warp", "rest api", "project", "portfolio"]
+repository = "https://github.com/royrustdev/warp-rest-api.git"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+publish = false
+
+[badges]
+maintenance = { status = "experimental" }
+
+[dependencies]
+warp = "0.3"
+tokio = { version = "1.2", features = ["full"]}

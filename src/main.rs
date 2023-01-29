@@ -1,4 +1,7 @@
-// #![allow(unused)]
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::cargo)]
+#![allow(clippy::module_name_repetitions)]
 
 mod routes;
 mod store;

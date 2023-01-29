@@ -1,3 +1,8 @@
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::cargo)]
+#![allow(clippy::unused_async)]
+
 use warp::{
     filters::{body::BodyDeserializeError, cors::CorsForbidden},
     http::StatusCode,
@@ -22,7 +27,7 @@ impl std::fmt::Display for Error {
                 write!(f, "Question not found")
             }
             Error::ParseError(ref err) => {
-                write!(f, "Cannot parse parameter: {}", err)
+                write!(f, "Cannot parse parameter: {err}")
             }
         }
     }
@@ -30,6 +35,14 @@ impl std::fmt::Display for Error {
 
 impl Reject for Error {}
 
+/// # Errors
+///
+/// Will return a custom defined `Err` if
+/// `Rejection` of a request of a filter is :
+/// 1. If `Error` in Filter
+/// 2. If `CORS` is forbidden
+/// 3. If Serialization or Deserialization fails
+/// 4. If route is not found
 pub async fn return_error(r: Rejection) -> Result<impl Reply, Rejection> {
     if let Some(error) = r.find::<Error>() {
         Ok(warp::reply::with_status(

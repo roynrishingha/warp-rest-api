@@ -15,7 +15,7 @@ pub struct Store {
 
 impl Store {
     pub fn new() -> Self {
-        Store {
+        Self {
             questions: Arc::new(RwLock::new(Self::init())),
             answers: Arc::new(RwLock::new(HashMap::new())),
         }

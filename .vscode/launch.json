@@ -1,0 +1,41 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'warp-rest-api'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=warp-rest-api",
+                    "--package=warp-rest-api"
+                ],
+                "filter": {
+                    "name": "warp-rest-api",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'warp-rest-api'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=warp-rest-api",
+                    "--package=warp-rest-api"
+                ],
+                "filter": {
+                    "name": "warp-rest-api",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

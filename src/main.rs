@@ -12,10 +12,24 @@ use crate::{
     store::Store,
 };
 use handle_errors::return_error;
+
+use tracing_subscriber::fmt::format::FmtSpan;
 use warp::{http::Method, Filter};
 
 #[tokio::main]
 async fn main() {
+    let log_filter =
+        std::env::var("RUST_LOG").unwrap_or_else(|_| "warp-rest-api=info,warp=error".to_owned());
+
+    tracing_subscriber::fmt()
+        // Use the filter above to determine which traces to record.
+        .with_env_filter(log_filter)
+        // Record an event when each span closes.
+        // This can be used to time
+        // our routes' durations!
+        .with_span_events(FmtSpan::CLOSE)
+        .init();
+
     let store = Store::new();
     let store_filter = warp::any().map(move || store.clone());
 
@@ -29,7 +43,15 @@ async fn main() {
         .and(warp::path::end())
         .and(warp::query())
         .and(store_filter.clone())
-        .and_then(question::get_questions);
+        .and_then(question::get_questions)
+        .with(warp::trace(|info| {
+            tracing::info_span!(
+                "get questions request",
+                method = %info.method(),
+                path = %info.path(),
+                id = %uuid::Uuid::new_v4()
+            )
+        }));
 
     let get_one_question = warp::get()
         .and(warp::path("questions"))
@@ -74,6 +96,7 @@ async fn main() {
         .or(delete_question)
         .or(add_answer)
         .with(cors)
+        .with(warp::trace::request())
         .recover(return_error);
 
     warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;

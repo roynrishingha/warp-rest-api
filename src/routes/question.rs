@@ -7,6 +7,7 @@ use crate::{
 };
 
 use handle_errors::Error;
+use tracing::{event, instrument, Level};
 
 use std::collections::HashMap;
 use warp::http::StatusCode;
@@ -27,10 +28,13 @@ pub async fn add_question(
     ))
 }
 
+#[instrument]
 pub async fn get_questions(
     params: HashMap<String, String>,
     store: Store,
 ) -> Result<impl warp::Reply, warp::Rejection> {
+    event!(target: "warp-rest-api", Level::INFO, "Querying questions");
+
     if params.is_empty() {
         let res: Vec<Question> = store.questions.read().await.values().cloned().collect();
         Ok(warp::reply::json(&res))

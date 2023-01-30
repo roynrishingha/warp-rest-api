@@ -3,6 +3,7 @@
 #![warn(clippy::cargo)]
 #![allow(clippy::module_name_repetitions)]
 
+mod profanity;
 mod routes;
 mod store;
 mod types;

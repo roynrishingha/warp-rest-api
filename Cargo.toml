@@ -24,3 +24,6 @@ uuid = {version = "0.8", features = ["v4"]}
 tracing = { version = "0.1", features = ["log"]}
 tracing-subscriber = { version = "0.3", features = ["env-filter"]}
 sqlx = { version = "0.5", features = ["runtime-tokio-rustls", "migrate", "postgres"]}
+reqwest = { version = "0.11", features = ["json"]}
+reqwest-middleware = "0.1.1"
+reqwest-retry = "0.1.1"

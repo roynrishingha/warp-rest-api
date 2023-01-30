@@ -18,8 +18,8 @@ use warp::{http::Method, Filter};
 
 #[tokio::main]
 async fn main() {
-    let log_filter =
-        std::env::var("RUST_LOG").unwrap_or_else(|_| "warp-rest-api=info,warp=error".to_owned());
+    let log_filter = std::env::var("RUST_LOG")
+        .unwrap_or_else(|_| "handle_errors=warn,warp-rest-api=info,warp=error".to_owned());
 
     tracing_subscriber::fmt()
         // Use the filter above to determine which traces to record.
@@ -30,7 +30,16 @@ async fn main() {
         .with_span_events(FmtSpan::CLOSE)
         .init();
 
-    let store = Store::new();
+    // if we need to add a username and password
+    // the connection would look like:
+    // "postgres://username:password@localhost:5432/database_name"
+    let store = Store::new("postgresql://postgres:1234@localhost:5432/warp_rest_api").await;
+
+    sqlx::migrate!()
+        .run(&store.clone().connection)
+        .await
+        .expect("Cannot run migration");
+
     let store_filter = warp::any().map(move || store.clone());
 
     let cors = warp::cors()
@@ -55,10 +64,10 @@ async fn main() {
 
     let get_one_question = warp::get()
         .and(warp::path("questions"))
-        .and(warp::path::param::<String>())
+        .and(warp::path::param::<i32>())
         .and(warp::path::end())
         .and(store_filter.clone())
-        .and_then(question::get_one_question);
+        .and_then(question::get_question_by_id);
 
     let add_question = warp::post()
         .and(warp::path("questions"))
@@ -69,7 +78,7 @@ async fn main() {
 
     let update_question = warp::put()
         .and(warp::path("questions"))
-        .and(warp::path::param::<String>())
+        .and(warp::path::param::<i32>())
         .and(warp::path::end())
         .and(store_filter.clone())
         .and(warp::body::json())
@@ -77,7 +86,7 @@ async fn main() {
 
     let delete_question = warp::delete()
         .and(warp::path("questions"))
-        .and(warp::path::param::<String>())
+        .and(warp::path::param::<i32>())
         .and(warp::path::end())
         .and(store_filter.clone())
         .and_then(question::delete_question);

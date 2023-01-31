@@ -2,6 +2,8 @@ use reqwest_middleware::ClientBuilder;
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::{Deserialize, Serialize};
 
+use std::env;
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct APIResponse {
     message: String,
@@ -26,6 +28,10 @@ struct BadWordsResponse {
 }
 
 pub async fn check_profanity(content: String) -> Result<String, handle_errors::Error> {
+    // We are already checking if the ENV VARIABLE is set inside main.rs,
+    // so safe to unwrap here
+    let api_key = env::var("BAD_WORDS_API_KEY").unwrap();
+
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
     let client = ClientBuilder::new(reqwest::Client::new())
         // Trace HTTP requests. See the tracing crate to make use of these traces.
@@ -35,10 +41,7 @@ pub async fn check_profanity(content: String) -> Result<String, handle_errors::E
 
     let res = client
         .post("https://api.apilayer.com/bad_words?censor_character=*")
-        .header(
-            "apikey",
-            "REPLACE THIS WITH ACTUAL API KEY FROM APILAYER.COM _BAD WORD API_",
-        )
+        .header("apikey", api_key)
         .body(content)
         .send()
         .await

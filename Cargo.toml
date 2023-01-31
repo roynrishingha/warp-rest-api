@@ -14,6 +14,34 @@ publish = false
 [badges]
 maintenance = { status = "experimental" }
 
+# Check Cargo documentation for details
+# Default parameters
+[profile.dev]
+opt-level = 0
+debug = true
+# split-debuginfo = '...' # Platform-specific.
+debug-assertions = true
+overflow-checks = true
+lto = false
+panic = 'unwind'
+incremental = true
+codegen-units = 256
+rpath = false
+
+# Default parameters
+[profile.release]
+opt-level = 3
+debug = false
+# split-debuginfo = '...' # Platform-specific.
+debug-assertions = false
+overflow-checks = false
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false
+
+
 [dependencies]
 warp = "0.3"
 tokio = { version = "1.2", features = ["full"]}
@@ -31,3 +59,11 @@ rand = "0.8"
 rust-argon2 = "1.0"
 paseto = "2.0"
 chrono = "0.4.19"
+dotenv = "0.15.0"
+clap = { version = "3.1.7", features = ["derive"] }
+proc-macro2 = "1.0.37"
+openssl = { version = "0.10.32", features = ["vendored"] }
+
+[build-dependencies]
+platforms = "2.0.0"
+

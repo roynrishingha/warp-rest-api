@@ -3,6 +3,7 @@
 #![warn(clippy::cargo)]
 #![allow(clippy::module_name_repetitions)]
 
+mod config;
 mod profanity;
 mod routes;
 mod store;
@@ -18,9 +19,28 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use warp::{http::Method, Filter};
 
 #[tokio::main]
-async fn main() {
-    let log_filter = std::env::var("RUST_LOG")
-        .unwrap_or_else(|_| "handle_errors=warn,warp-rest-api=info,warp=error".to_owned());
+async fn main() -> Result<(), handle_errors::Error> {
+    let config = config::Config::new().expect("FAILED to set CONFIG");
+
+    let log_filter = format!(
+        "handle_errors={},warp-rest-api={},warp={}",
+        config.log_level, config.log_level, config.log_level
+    );
+
+    // "postgres://username:password@localhost:5432/database_name"
+    let store = Store::new(&format!(
+        "postgresql://{}:{}@{}:{}/{}",
+        config.db_user, config.db_password, config.db_host, config.db_port, config.db_name
+    ))
+    .await
+    .map_err(|e| handle_errors::Error::DatabaseQueryError(e))?;
+
+    sqlx::migrate!()
+        .run(&store.clone().connection)
+        .await
+        .expect("Cannot run migration");
+
+    let store_filter = warp::any().map(move || store.clone());
 
     tracing_subscriber::fmt()
         // Use the filter above to determine which traces to record.
@@ -30,18 +50,6 @@ async fn main() {
         // our routes' durations!
         .with_span_events(FmtSpan::CLOSE)
         .init();
-
-    // if we need to add a username and password
-    // the connection would look like:
-    // "postgres://username:password@localhost:5432/database_name"
-    let store = Store::new("postgresql://postgres:1234@localhost:5432/warp_rest_api").await;
-
-    sqlx::migrate!()
-        .run(&store.clone().connection)
-        .await
-        .expect("Cannot run migration");
-
-    let store_filter = warp::any().map(move || store.clone());
 
     let cors = warp::cors()
         .allow_any_origin()
@@ -121,5 +129,9 @@ async fn main() {
         .with(warp::trace::request())
         .recover(return_error);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
+    tracing::info!("warp-rest-api build ID {}", env!("WARP_REST_API_VERSION"));
+
+    warp::serve(routes).run(([0, 0, 0, 0], config.port)).await;
+
+    Ok(())
 }

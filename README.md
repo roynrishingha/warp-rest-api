@@ -100,6 +100,31 @@ Creating migrations/20230129151005_answers_table.up.sql
 Creating migrations/20230129151005_answers_table.down.sql
 ```
 
+##### SETUP MIGRATION FOR ACCOUNTS TABLE
+
+Add answers table migration
+
+```sh
+sqlx migrate add -r create_accounts_table
+```
+
+###### THIS COMMAND SHOULD RETURN
+
+```sh
+Creating migrations/20230131020159_create_accounts_table.up.sql
+Creating migrations/20230131020159_create_accounts_table.down.sql
+```
+
+```sh
+sqlx migrate add -r extend_questions_table;
+# Creating migrations/20230131023048_extend_questions_table.up.sql
+# Creating migrations/20230131023048_extend_questions_table.down.sql
+
+sqlx migrate add -r extend_answers_table;
+# Creating migrations/20230131023126_extend_answers_table.up.sql
+# Creating migrations/20230131023126_extend_answers_table.down.sql
+```
+
 ##### RUN THE MIGRATION
 
 ```sh
@@ -152,9 +177,10 @@ warp_rest_api=# \dt
  Schema |       Name       | Type  |  Owner
 --------+------------------+-------+----------
  public | _sqlx_migrations | table | postgres
+ public | accounts         | table | postgres
  public | answers          | table | postgres
  public | questions        | table | postgres
-(3 rows)
+(4 rows)
 ```
 
 ### HOW TO REVERT DATABASE CHANGES ?
@@ -183,11 +209,48 @@ cargo run --release
 ## USAGE
 
 All the examples shown here are by using `curl`.
+
+In order CREATE, UPDATE, DELETE resources, 
+User needs to Register and Login.
+
+### REGISTER A NEW USER
+
+```sh
+curl -X POST \
+  'http://127.0.0.1:8080/registration' \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+  "email": "test1@gmail.com",
+  "password": "1234"
+}'
+```
+
+### LOGIN AN EXISTING USER
+
+```sh
+curl -X POST \
+  'http://127.0.0.1:8080/login' \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+  "email": "test1@gmail.com",
+  "password": "1234"
+}'
+
+# Token looks like this:
+#
+# "v2.local.NLj-3SvcxmxFS0nvbqFNju1w-CwmhPd9oQMUaO7dgzg5L94YlO4kppfpQ1A0iYIBhxdyFGrbAmn4ASmBnCS9vYxu7Ku5iGZVHUjw5DjPvYZbcATvzbZ1p8lV2hCskReb-xX-DzULxH6qIBJFoYfgqwz6xv4YXdEv1nDwnQDuYdUW3WIXkmw"
+#
+# Note: The Token given above is just an example.
+```
+
+**IT RETURNS A TOKEN THAT WE NEED TO CREATE, UPDATE, DELETE RESOURCES. PASS THIS TOKEN AS AN AUTHORIZATION TOKEN IN HEADER OF EACH REQUEST.**
+
 ### CREATE A NEW QUESTION
 
 ```sh
 curl -X POST \
   'http://127.0.0.1:8080/questions' \
+  --header 'Authorization: "ATHORIZATION TOKEN THAT I GOT FROM LOGIN"' \
   --header 'Content-Type: application/json' \
   --data-raw '  {
     "title": "How you doing?",
@@ -198,6 +261,7 @@ curl -X POST \
   }'
 ```
 
+**AUTHORIZATION IS NOT REQUIRED FOR GET REQUESTS**
 ### GET ALL QUESTIONS
 
 ```sh
@@ -221,6 +285,7 @@ curl -X GET 'http://127.0.0.1:8080/questions/1'
 ```sh
 curl -X PUT \
   'http://127.0.0.1:8080/questions/1' \
+  --header 'Authorization: "ATHORIZATION TOKEN THAT I GOT FROM LOGIN"' \
   --header 'Content-Type: application/json' \
   --data-raw '{
   "id": 1,
@@ -236,18 +301,22 @@ curl -X PUT \
 
 Request format
 ```sh
-curl -X DELETE 'http://host:port/questions/:question_id'
+curl -X DELETE 'http://host:port/questions/:question_id' \
+--header 'Authorization: ATHORIZATION TOKEN THAT I GOT FROM LOGIN'
 ```
 
 Delete the question with id 1
 ```sh
-curl -X DELETE 'http://127.0.0.1:8080/questions/1'
+curl -X DELETE \
+  'http://127.0.0.1:8080/questions/1' \
+  --header 'Authorization: ATHORIZATION TOKEN THAT I GOT FROM LOGIN'
 ```
 
 ### ADD ANSWER TO A QUESTION
 
 ```sh
 curl --location --request POST 'localhost:8080/answers' \
+--header 'Authorization: ATHORIZATION TOKEN THAT I GOT FROM LOGIN'
 --header 'Content-Type: application/x-www-form-urlencoded' \
 --data-urlencode 'question_id=1' \
 --data-urlencode 'content=This is the question I had.'

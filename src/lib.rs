@@ -2,54 +2,27 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::cargo)]
 #![allow(clippy::module_name_repetitions)]
+#![allow(opaque_hidden_inferred_bound)]
 
-mod config;
+pub use handle_errors;
+
+use crate::routes::{answer, authentication, question};
+use tokio::sync::{oneshot, oneshot::Sender};
+use tracing_subscriber::fmt::format::FmtSpan;
+use warp::{http::Method, Filter, Reply};
+
+pub mod config;
 mod profanity;
 mod routes;
 mod store;
-mod types;
+pub mod types;
 
-use crate::{
-    routes::{answer, authentication, question},
-    store::Store,
-};
-use handle_errors::return_error;
+pub struct OneshotHandler {
+    pub sender: Sender<i32>,
+}
 
-use tracing_subscriber::fmt::format::FmtSpan;
-use warp::{http::Method, Filter};
-
-#[tokio::main]
-async fn main() -> Result<(), handle_errors::Error> {
-    let config = config::Config::new().expect("FAILED to set CONFIG");
-
-    let log_filter = format!(
-        "handle_errors={},warp-rest-api={},warp={}",
-        config.log_level, config.log_level, config.log_level
-    );
-
-    // "postgres://username:password@localhost:5432/database_name"
-    let store = Store::new(&format!(
-        "postgresql://{}:{}@{}:{}/{}",
-        config.db_user, config.db_password, config.db_host, config.db_port, config.db_name
-    ))
-    .await
-    .map_err(|e| handle_errors::Error::DatabaseQueryError(e))?;
-
-    sqlx::migrate!()
-        .run(&store.clone().connection)
-        .await
-        .expect("Cannot run migration");
-
+async fn build_routes(store: store::Store) -> impl Filter<Extract = impl Reply> + Clone {
     let store_filter = warp::any().map(move || store.clone());
-
-    tracing_subscriber::fmt()
-        // Use the filter above to determine which traces to record.
-        .with_env_filter(log_filter)
-        // Record an event when each span closes.
-        // This can be used to time
-        // our routes' durations!
-        .with_span_events(FmtSpan::CLOSE)
-        .init();
 
     let cors = warp::cors()
         .allow_any_origin()
@@ -117,7 +90,7 @@ async fn main() -> Result<(), handle_errors::Error> {
         .and(warp::body::json())
         .and_then(authentication::login);
 
-    let routes = add_question
+    add_question
         .or(get_questions)
         .or(get_one_question)
         .or(update_question)
@@ -127,11 +100,57 @@ async fn main() -> Result<(), handle_errors::Error> {
         .or(login)
         .with(cors)
         .with(warp::trace::request())
-        .recover(return_error);
+        .recover(handle_errors::return_error)
+}
 
-    tracing::info!("warp-rest-api build ID {}", env!("WARP_REST_API_VERSION"));
+pub async fn setup_store(config: &config::Config) -> Result<store::Store, handle_errors::Error> {
+    let store = store::Store::new(&format!(
+        "postgres://{}:{}@{}:{}/{}",
+        config.db_user, config.db_password, config.db_host, config.db_port, config.db_name
+    ))
+    .await
+    .map_err(handle_errors::Error::DatabaseQueryError)?;
 
+    sqlx::migrate!()
+        .run(&store.clone().connection)
+        .await
+        .map_err(handle_errors::Error::MigrationError)?;
+
+    let log_filter = format!(
+        "handle_errors={},warp-rest-api={},warp={}",
+        config.log_level, config.log_level, config.log_level
+    );
+
+    tracing_subscriber::fmt()
+        // Use the filter we built above to determine which traces to record.
+        .with_env_filter(log_filter)
+        // Record an event when each span closes. This can be used to time our
+        // routes' durations!
+        .with_span_events(FmtSpan::CLOSE)
+        .init();
+
+    Ok(store)
+}
+
+pub async fn run(config: config::Config, store: store::Store) {
+    let routes = build_routes(store).await;
     warp::serve(routes).run(([0, 0, 0, 0], config.port)).await;
+}
 
-    Ok(())
+pub async fn oneshot(store: store::Store) -> OneshotHandler {
+    let routes = build_routes(store).await;
+    let (tx, rx) = oneshot::channel::<i32>();
+
+    let socket: std::net::SocketAddr = "127.0.0.1:3030"
+        .to_string()
+        .parse()
+        .expect("Not a valid address");
+
+    let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(socket, async {
+        rx.await.ok();
+    });
+
+    tokio::task::spawn(server);
+
+    OneshotHandler { sender: tx }
 }

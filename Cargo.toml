@@ -1,6 +1,6 @@
 [package]
 name = "warp-rest-api"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["Nrishinghananda Roy <royrustdev@gmail.com>"]
 description = "A REST API created with warp framework that lets it users to ask and answer questions."
@@ -43,11 +43,12 @@ rpath = false
 
 
 [dependencies]
+handle_errors = { path = "handle_errors", version = "1.0.0" }
+mock-server = { path = "mock-server", version = " 1.0.0" }
 warp = "0.3"
 tokio = { version = "1.2", features = ["full"]}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
-handle_errors = {path = "handle_errors"}
 uuid = {version = "0.8", features = ["v4"]}
 tracing = { version = "0.1", features = ["log"]}
 tracing-subscriber = { version = "0.3", features = ["env-filter"]}

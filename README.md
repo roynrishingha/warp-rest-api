@@ -323,7 +323,7 @@ curl --location --request POST 'localhost:8080/answers' \
 ```
 
 ```sh
-cargo run -- --db-host localhost --log-level info --db-name rustwebdev –
+cargo run -- --db-host localhost --log-level info --db-name warp_rest_api –
 db-port 5432 --db-password password
 
 ```
@@ -477,4 +477,11 @@ PostgreSQL init process complete; ready for start up.
 2023-01-31 06:58:20.667 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
 2023-01-31 06:58:20.672 UTC [57] LOG:  database system was shut down at 2023-01-31 06:58:20 UTC
 2023-01-31 06:58:20.678 UTC [1] LOG:  database system is ready to accept connections
+```
+
+Important installation in my fedora machine to solve openssl issue
+
+```sh
+sudo dnf install perl-FindBin perl-File-Compare
+
 ```

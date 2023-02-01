@@ -709,7 +709,7 @@ dependencies = [
 
 [[package]]
 name = "handle_errors"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "reqwest",
  "reqwest-middleware",
@@ -1078,6 +1078,16 @@ dependencies = [
  "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys",
+]
+
+[[package]]
+name = "mock-server"
+version = "1.0.0"
+dependencies = [
+ "bytes",
+ "serde_json",
+ "tokio",
+ "warp",
 ]
 
 [[package]]
@@ -2455,12 +2465,13 @@ dependencies = [
 
 [[package]]
 name = "warp-rest-api"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "clap",
  "dotenv",
  "handle_errors",
+ "mock-server",
  "openssl",
  "paseto",
  "platforms",

@@ -61,7 +61,7 @@ pub async fn get_questions(
         // we override our mutable variable from above
         // and replace it with the given Pagination
         // from the client.
-        pagination = extract_pagination(&params)?;
+        pagination = extract_pagination(params)?;
     }
 
     match store

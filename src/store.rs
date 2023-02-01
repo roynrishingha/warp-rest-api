@@ -1,15 +1,17 @@
-use sqlx::postgres::{PgPool, PgPoolOptions, PgRow};
-use sqlx::Row;
-
-use crate::types::{
-    account::{Account, AccountId},
-    answer::{Answer, AnswerId, NewAnswer},
-    question::{NewQuestion, Question, QuestionId},
+use sqlx::{
+    postgres::{PgPool, PgPoolOptions, PgRow},
+    Row,
 };
 
 use handle_errors::Error;
 
-#[derive(Clone, Debug)]
+use crate::types::{
+    account::{Account, AccountId},
+    answer::Answer,
+    question::{NewQuestion, Question, QuestionId},
+};
+
+#[derive(Debug, Clone)]
 pub struct Store {
     pub connection: PgPool,
 }
@@ -22,7 +24,7 @@ impl Store {
             .connect(db_url)
             .await?;
 
-        Ok(Self {
+        Ok(Store {
             connection: db_pool,
         })
     }
@@ -72,29 +74,13 @@ impl Store {
             }
     }
 
-    ///  We pass a limit and offset parameter to the function,
-    /// which indicates if pagination is wanted by the client,
-    /// and return a vector of questions and a sqlx error type
-    /// in case something goes wrong.
-    ///
-    ///  We write plain SQL via the query function
-    /// and add the dollar sign ($) and a number for the variables
-    /// we pass to the query.
-    ///
-    /// If we want to return a question (or all of them)
-    /// from the query, we use map to go over each
-    /// returned `PostgreSQL` row we receive and
-    /// create a Question out of it.
     pub async fn get_questions(
-        &self,
+        self,
         limit: Option<i32>,
         offset: i32,
     ) -> Result<Vec<Question>, Error> {
         match sqlx::query("SELECT * from questions LIMIT $1 OFFSET $2")
-            //  The bind method replaces a $ + number pair
-            // in the SQL query with the variable we specify here.
             .bind(limit)
-            // The second bind is our offset variable.
             .bind(offset)
             .map(|row: PgRow| Question {
                 id: QuestionId(row.get("id")),
@@ -102,8 +88,6 @@ impl Store {
                 content: row.get("content"),
                 tags: row.get("tags"),
             })
-            // The fetch_all method executes our SQL statement
-            // and returns all the added questions back to us.
             .fetch_all(&self.connection)
             .await
         {
@@ -183,26 +167,17 @@ impl Store {
         }
     }
 
-    pub async fn add_answer(
-        self,
-        new_answer: NewAnswer,
-        account_id: AccountId,
-    ) -> Result<Answer, Error> {
+    pub async fn add_answer(self, answer: Answer, account_id: AccountId) -> Result<bool, Error> {
         match sqlx::query(
             "INSERT INTO answers (content, corresponding_question, account_id) VALUES ($1, $2, $3)",
         )
-        .bind(new_answer.content)
-        .bind(new_answer.question_id.0)
+        .bind(answer.content)
+        .bind(answer.question_id)
         .bind(account_id.0)
-        .map(|row: PgRow| Answer {
-            id: AnswerId(row.get("id")),
-            content: row.get("content"),
-            question_id: QuestionId(row.get("question_id")),
-        })
-        .fetch_one(&self.connection)
+        .execute(&self.connection)
         .await
         {
-            Ok(answer) => Ok(answer),
+            Ok(_) => Ok(true),
             Err(error) => {
                 tracing::event!(
                     tracing::Level::ERROR,

@@ -1,3 +1,4 @@
 /target
 /handle_errors/target
 .env
+/integration-tests/target
